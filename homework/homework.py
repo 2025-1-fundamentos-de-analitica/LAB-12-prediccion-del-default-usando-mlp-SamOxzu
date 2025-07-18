@@ -100,7 +100,7 @@ import pandas as pd
 import numpy as np
 from sklearn.compose import ColumnTransformer
 from sklearn.decomposition import PCA
-from sklearn.discriminant_analysis import StandardScaler
+from sklearn.preprocessing import StandardScaler
 from sklearn.feature_selection import SelectKBest, f_classif, f_regression
 from sklearn.linear_model import LogisticRegression
 from sklearn.neural_network import MLPClassifier
@@ -162,20 +162,22 @@ def create_pipeline():
         "PAY_AMT6",
     ]
 
+    # Create ColumnTransformer for OneHotEncoder
     preprocessor = ColumnTransformer(
         [
             ("cat", OneHotEncoder(handle_unknown="ignore"), cat_features),
-            ("scaler", StandardScaler(with_mean=True, with_std=True), num_features),
+            ("num", "passthrough", num_features),
         ],
     )
+    
     return Pipeline(
         [
-            ("preprocessor", preprocessor),
-            ("feature_selection", SelectKBest(score_func=f_classif)),
-            ("pca", PCA()),
-            ("classifier", MLPClassifier(max_iter=15000, random_state=17)),
+            ("OneHotEncoder", preprocessor),
+            ("PCA", PCA()),
+            ("StandardScaler", StandardScaler()),
+            ("SelectKBest", SelectKBest(score_func=f_classif)),
+            ("MLPClassifier", MLPClassifier(max_iter=15000, random_state=17)),
         ]
-
     )
 
 
@@ -184,11 +186,11 @@ def make_grid_search(pipeline):
     grid_search = GridSearchCV(
         estimator=pipeline,
         param_grid = {
-            'pca__n_components': [None],
-            'feature_selection__k':[20],
-            "classifier__hidden_layer_sizes": [(50, 30, 40, 60)],
-            'classifier__alpha': [0.26],
-            "classifier__learning_rate_init": [0.001],
+            'PCA__n_components': [None],
+            'SelectKBest__k':[15, 20, 25],
+            "MLPClassifier__hidden_layer_sizes": [(100, 50), (50, 30, 40, 60), (200, 100)],
+            'MLPClassifier__alpha': [0.1, 0.26, 0.5],
+            "MLPClassifier__learning_rate_init": [0.001, 0.01],
         },
         cv=10,
         scoring='balanced_accuracy',
